@@ -9,6 +9,7 @@ classdef MetricRecorder < matlab.mixin.Copyable
 		harqRtx;
 		arqRtx;
 		powerState;
+        ASMState;
 		ber;
 		snrdB;
 		wideBandSinrdB
@@ -44,6 +45,7 @@ classdef MetricRecorder < matlab.mixin.Copyable
 				obj.arqRtx = zeros(Config.Runtime.simulationRounds, numEnodeBs);
 			end
 			obj.powerState = zeros(Config.Runtime.simulationRounds, numEnodeBs);
+            obj.ASMState = zeros(Config.Runtime.simulationRounds, numEnodeBs);
 			
 			% Initialise for UE
 			obj.ber = zeros(Config.Runtime.simulationRounds, Config.Ue.number);
@@ -121,6 +123,7 @@ classdef MetricRecorder < matlab.mixin.Copyable
 		
 		function obj = recordPowerState(obj, Cells, schRound)
 			for iCell = 1:length(Cells)
+                obj.ASMState(schRound, iCell) = Cells(iCell).ASMState;
 				obj.powerState(schRound, iCell) = Cells(iCell).PowerState;
 			end
         end

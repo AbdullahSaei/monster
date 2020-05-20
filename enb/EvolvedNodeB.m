@@ -28,6 +28,13 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 		P0;
 		DeltaP;
 		Psleep;
+        %ASM parameters
+        ASMState;
+        Pactive;
+        Pidle;
+        Psm;
+        ASMCount;
+        %END
 		Tx;
 		Rx;
 		Mac;
@@ -56,8 +63,13 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 					obj.NDLRB = Config.MacroEnb.numPRBs;
 					obj.Pmax = Config.MacroEnb.Pmax; % W
 					obj.P0 = 130; % W
-					obj.DeltaP = 4.7;
+                    obj.DeltaP = 4.7;
 					obj.Psleep = 75; % W
+                    %ASM parameters
+                    obj.Pactive = 750; % W
+                    obj.Pidle = 328; % W
+                    obj.Psm   = [157 42.9 28.5 24.3]; % sm1 2 3 4 in (W)
+                    %END
 					obj.Mimo = generateMimoConfig(Config);
 				case 'micro'
 					obj.NDLRB = Config.MicroEnb.numPRBs;
@@ -79,6 +91,8 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 			obj.Windowing = 0;
 			obj.DuplexMode = 'FDD';
 			obj.PowerState = 1;
+            obj.ASMState = 0; %0 for normal, from 1 to 4 for SM#
+            obj.ASMCount = 0; % counts idle time in ms
 			obj.HystCount = 0;
 			obj.SwitchCount = 0;
 			obj.DlFreq = Config.Phy.downlinkFrequency;
@@ -368,17 +382,48 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 				end
 				
 				% normal operative range
-			else
+                % TODO: All the work
+            else
 				obj.PowerState = 1;
 				obj.HystCount = 0;
 				obj.SwitchCount = 0;
+                
+                %ASM active
+                if Config.ASM.Enabled 
+                    % ASM check active sleeping modes
+                    obj = evaluateSleepState(obj, Config);
+                end
 			end
-		end
+        end
+        
+        % ASM Evaluate Advanced Sleeping State
+        function obj = evaluateSleepState(obj, Config)
+            obj.ASMState = 1; %sm1 is already included in avg DTX
+            if obj.Utilisation == 0
+               obj.ASMCount = obj.ASMCount +1;
+               if obj.ASMCount == Config.ASM.tSM2 %sm2
+                   obj.ASMState = obj.ASMState +1;
+               end
+               if obj.ASMCount == Config.ASM.tSM3 %sm3
+                   obj.ASMState = obj.ASMState +1;
+               end
+               if obj.ASMCount == Config.ASM.tSM4 %sm4
+                   obj.ASMState = obj.ASMState +1;
+               end
+            else
+               obj.ASMCount = 0;
+               obj.ASMState = 0; 
+            end
+            % if buffering is enabled
+            if Config.ASM.Buffering
+                
+            end
+        end
 
 		function obj = uplinkSchedule(obj, Users)
 			if obj.Mac.ShouldSchedule
 				obj.Mac.Schedulers.uplink.scheduleUsers(Users);
-			elseif length(obj.AssociatedUsers) > 0
+			elseif ~isempty(obj.AssociatedUsers)
 				obj.Logger.log('Could not schedule in uplinkSchedule: no data in associated users queues or cell sleeping','WRN');
 			end
 		end
@@ -397,12 +442,23 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 			if obj.PowerState == 1 || obj.PowerState == 2 || obj.PowerState == 3
 				% active, overload and underload state
 				obj.PowerIn = obj.CellRefP*obj.P0 + obj.DeltaP*Pout;
+                
+                % ASM if active override power with Psm
+                if obj.PowerState == 1
+                    if obj.ASMState > 0
+                        obj.PowerIn = obj.Psm(obj.ASMState);
+                    else
+                        obj.PowerIn = obj.Pactive;
+                    end
+                else
+                    obj.PowerIn = obj.Pidle;
+                end
 			else
 				% shutodwn, inactive and boot
 				obj.PowerIn = obj.Psleep;
 			end
-		end
-		
+        end
+        
 		% Reset an eNodeB at the end of a scheduling round
 		function obj = reset(obj, nextSchRound)
 			% First off, set the number of the next subframe within the frame

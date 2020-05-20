@@ -42,6 +42,8 @@ classdef MonsterConfig < matlab.mixin.Copyable
 		Backhaul = struct();
 		SRS = struct();
 		Mimo = struct();
+        %Advanced sleep mode parameters
+        ASM = struct();
 	end
 
 	methods
@@ -50,6 +52,17 @@ classdef MonsterConfig < matlab.mixin.Copyable
 			% 
 			% MonsterConfig instance
 			%
+            
+            %Parameters for Advanced Sleep mode Power Saving Technique
+            ASM = struct();
+            ASM.Enabled = true; %Turn ASM on or off
+            %time duration (millisecs) of Sleep modes
+            ASM.tSM1 = 71e-3;
+            ASM.tSM2 = 1;
+            ASM.tSM3 = 10;
+            ASM.tSM4 = 1000;
+            ASM.Buffering = false; % Activate or deactivate buffering during sleeping
+            obj.ASM = ASM;
 
 			% Parameters related to simulation run time
 			Runtime = struct();

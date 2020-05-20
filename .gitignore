@@ -14,3 +14,4 @@ build/*
 !build/README.md
 /app/monster/
 /examples/live/**/*.mat
+/Backup/
