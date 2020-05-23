@@ -399,6 +399,7 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
         % ASM Evaluate Advanced Sleeping State
         function obj = evaluateSleepState(obj, Config)
             obj.ASMState = 1; %sm1 is already included in avg DTX
+            %DTX provide 5% reduction in average power
             if obj.Utilisation == 0
                obj.ASMCount = obj.ASMCount +1;
                if obj.ASMCount == Config.ASM.tSM2 %sm2
@@ -412,7 +413,8 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
                end
             else
                obj.ASMCount = 0;
-               obj.ASMState = 0; 
+               obj.ASMState = 0;
+               %Check the buffer queue
             end
             % if buffering is enabled
             if Config.ASM.Buffering

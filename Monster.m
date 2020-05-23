@@ -291,8 +291,8 @@ classdef Monster < matlab.mixin.Copyable
 			% Use the result of refreshUsersAssociation to setup the UL scheduling
 			arrayfun(@(x)x.resetScheduleUL(), obj.Cells);
 			arrayfun(@(x)x.uplinkSchedule(obj.Users), obj.Cells);
-		end
-
+        end
+        
 		function obj = setupEnbTransmitters(obj)
 			% setupEnbTransmitters is used to prepare the data for the downlink transmission
 			% 
