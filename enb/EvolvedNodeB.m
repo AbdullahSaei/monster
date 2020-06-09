@@ -64,11 +64,11 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 					obj.Pmax = Config.MacroEnb.Pmax; % W
 					obj.P0 = 130; % W
                     obj.DeltaP = 4.7;
-					obj.Psleep = 75; % W
+					obj.Psleep =  0; %%75; % W
                     %ASM parameters
-                    obj.Pactive = 750; % W
-                    obj.Pidle = 328; % W
-                    obj.Psm   = [157 42.9 28.5 24.3]; % sm1 2 3 4 in (W)
+                    obj.Pactive = 250; % W add micoDTX
+                    obj.Pidle = 109; % W
+                    obj.Psm   = [52.3 14.3 9.51 8.1]; % sm1 2 3 4 in (W)
                     %END
 					obj.Mimo = generateMimoConfig(Config);
 				case 'micro'
@@ -398,10 +398,12 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
         
         % ASM Evaluate Advanced Sleeping State
         function obj = evaluateSleepState(obj, Config)
-            obj.ASMState = 1; %sm1 is already included in avg DTX
-            %DTX provide 5% reduction in average power
+            %obj.ASMState = 1; %sm1 is already included in avg DTX
+            %DTX reduction in average power
             if obj.Utilisation == 0
-               obj.ASMCount = obj.ASMCount +1;
+               if obj.ASMCount == 0
+                   obj.ASMState = 1;
+               end
                if obj.ASMCount == Config.ASM.tSM2 %sm2
                    obj.ASMState = obj.ASMState +1;
                end
@@ -411,6 +413,9 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
                if obj.ASMCount == Config.ASM.tSM4 %sm4
                    obj.ASMState = obj.ASMState +1;
                end
+               obj.ASMCount = obj.ASMCount +1;
+            elseif obj.Utilisation == 100
+                    obj.ASMState = 100;
             else
                obj.ASMCount = 0;
                obj.ASMState = 0;
@@ -418,8 +423,9 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
             end
             % if buffering is enabled
             if Config.ASM.Buffering
-                
+
             end
+
         end
 
 		function obj = uplinkSchedule(obj, Users)
@@ -447,11 +453,8 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
                 
                 % ASM if active override power with Psm
                 if obj.PowerState == 1
-                    if obj.ASMState > 0
-                        obj.PowerIn = obj.Psm(obj.ASMState);
-                    else
-                        obj.PowerIn = obj.Pactive;
-                    end
+                    % ASM if active override power with Psm
+                    obj = calculatePowerEnB(obj);
                 else
                     obj.PowerIn = obj.Pidle;
                 end
@@ -459,6 +462,17 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 				% shutodwn, inactive and boot
 				obj.PowerIn = obj.Psleep;
 			end
+        end
+        
+        function obj = calculatePowerEnB(obj)
+            % ASM if active override power with Psm
+            if obj.ASMState == 100
+                obj.PowerIn = obj.Pactive;
+            elseif obj.ASMState > 0
+                obj.PowerIn = obj.Psm(obj.ASMState);
+            else
+                obj.PowerIn = obj.Pactive*obj.Utilisation/100 + obj.Psm(obj.ASMState+1)*(100-obj.Utilisation)/100;
+            end
         end
         
 		% Reset an eNodeB at the end of a scheduling round
@@ -526,7 +540,7 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 				if isempty(obj.Utilisation)
 					obj.Utilisation = 0;
 				end
-			elseif length(obj.AssociatedUsers) > 0
+			elseif ~isempty(obj.AssociatedUsers)
 				obj.Logger.log('Could not schedule in downlinkSchedule: no data in associated users queues or cell sleeping','WRN');
 				obj.Utilisation = 0;
 			end

@@ -103,7 +103,7 @@ classdef Monster < matlab.mixin.Copyable
 				obj.Logger.log('(MONSTER - setupSimulation) setting up runtime plots', 'DBG');
 				[Plot.LayoutFigure, Plot.LayoutAxes] = createLayoutPlot(obj.Config, Layout);
 				[Plot.PHYFigure, Plot.PHYAxes] = createPHYplot(obj.Config);
-        [Plot.LogicLayoutFigure, Plot.LogicLayoutAxes] = createLogicLayoutPlot(obj.Config);
+                [Plot.LogicLayoutFigure, Plot.LogicLayoutAxes] = createLogicLayoutPlot(obj.Config);
 			end
 
 			% Assign the properties to the Monster object
@@ -197,6 +197,11 @@ classdef Monster < matlab.mixin.Copyable
 
 			obj.Logger.log('(MONSTER - run) uplink eNodeB reception', 'DBG');
 			obj.uplinkEnbReception();
+            
+            %For ASM
+            %Functions already called in MetricRecorder.m
+            %obj.Logger.log('(MONSTER - run) Power Calculations eNodeB', 'DBG');
+			%obj.ASMEnbPowerCalculations();
 
 			% TODO: no data is actually being sent
 			%obj.uplinkEnbDataDecoding();
@@ -314,8 +319,24 @@ classdef Monster < matlab.mixin.Copyable
 			% Finally modulate the waveform for all the eNodeBs
 			arrayfun(@(x)x.modulateTxWaveform(), [obj.Cells.Tx]);
 
-		end
+        end
 
+        % For ASM
+   		function obj = ASMEnbPowerCalculations(obj)
+			% EnbPowerCalculations is used to evaluate the power state and calculate the power
+			% consumption
+			% 
+			% :obj: Monster instance
+			%
+			
+			% Evaluate Power State for all eNodeBs
+			arrayfun(@(x)x.evaluateSleepState(obj.Config), obj.Cells);
+            
+			% Evaluate Power State for all eNodeBs
+			arrayfun(@(x)x.calculatePowerEnB(), obj.Cells);
+
+		end        
+        
 		function obj = downlinkTraverse(obj)
 			% donwlinkTraverse is used to perform a channel traversal in the downlink
 			% 
@@ -382,16 +403,16 @@ classdef Monster < matlab.mixin.Copyable
 		end
 		
 		function obj = plotRuntime(obj)
-				% plotRuntime executes the runtime plots
-				%
-				% :obj: Monster instance
-				%
-				if obj.Config.SimulationPlot.runtimePlot
-          plotSpectrums(obj.Users, obj.Cells, obj.Config, obj.Plot);
-          plotConstDiagramDL(obj.Users, obj.Cells, obj.Config, obj.Plot);
-          plotAssociationTable(obj.Users, obj.Cells, obj.Config, obj.Plot);
-          plotLogicLayout(obj.Cells, obj.Config, obj.Plot);
-				end
+            % plotRuntime executes the runtime plots
+            %
+            % :obj: Monster instance
+            %
+            if obj.Config.SimulationPlot.runtimePlot
+                plotSpectrums(obj.Users, obj.Cells, obj.Config, obj.Plot);
+                plotConstDiagramDL(obj.Users, obj.Cells, obj.Config, obj.Plot);
+                plotAssociationTable(obj.Users, obj.Cells, obj.Config, obj.Plot);
+                plotLogicLayout(obj.Cells, obj.Config, obj.Plot);
+            end
 		end
 	end
 end

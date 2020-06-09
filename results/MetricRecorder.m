@@ -92,6 +92,7 @@ classdef MetricRecorder < matlab.mixin.Copyable
 		function obj = recordPower(obj, Cells, schRound, otaPowerScale, utilLo, Logger)
 			for iCell = 1:length(Cells)
 				if ~isempty(obj.util(schRound, iCell))
+                    Cells(iCell).evaluatePowerState(obj.Config, Cells);
 					Cells(iCell) = Cells(iCell).calculatePowerIn(obj.util(schRound, iCell)/100, otaPowerScale, utilLo);
 					obj.powerConsumed(schRound, iCell) = Cells(iCell).PowerIn;
 				else

@@ -8,7 +8,7 @@ Config = MonsterConfig(); % Get template config parameters
 
 Config.Logs.logToFile = 2; % 0 only console | 1 only file | 2 both
 Config.SimulationPlot.runtimePlot = 0; 
-Config.Runtime.simulationRounds = 10; % each round ITT (subframe 1 ms)
+Config.Runtime.simulationRounds = 20; % each round ITT (subframe 1 ms)
 
 %ASM paper duplication
 Config.Scenario = 'ASM_reproduction';
