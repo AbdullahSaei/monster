@@ -6,12 +6,17 @@ w = warning ('off','all');
 %% Get configuration
 Config = MonsterConfig(); % Get template config parameters
 
-Config.Logs.logToFile = 2; % 0 only console | 1 only file | 2 both
+Config.Logs.logToFile = 0; % 0 only console | 1 only file | 2 both
 Config.SimulationPlot.runtimePlot = 0; 
-Config.Runtime.simulationRounds = 20; % each round ITT (subframe 1 ms)
+Config.Runtime.simulationRounds = 14; % each round TTI (subframe 1 ms)
+
+%ASM parameters:
+Config.ASM.Periodicity = 4000;
+Config.Ue.number = 9;
+Config.Scenario = strcat('ASM_p',num2str(Config.ASM.Periodicity),'u',num2str(Config.Ue.number),'_');
+
 
 %ASM paper duplication
-Config.Scenario = 'ASM_reproduction';
 Config.MacroEnb.sitesNumber = 1;
 Config.MacroEnb.cellsPerSite = 3;
 Config.MacroEnb.numPRBs = 100; %50 corresponds to a bandwidth of 10MHz
@@ -45,7 +50,6 @@ Config.Traffic.primary = 'videoStreaming';
 Config.Traffic.mix = 0; %0-> no mix, only primary
 
 %Simulation bandwidth: 20 MHz for TDD, 10 MHz+10 MHz for FDD
-Config.Ue.number = 49; %TODO: 14 different from 1 to 60
 
 Logger = MonsterLog(Config);
 Logger.log('(MAIN) configured simulations and started initialisation', 'NFO');
@@ -78,6 +82,7 @@ for iRound = 0:(Simulation.Runtime.totalRounds - 1)
 		Simulation.Logger.log('(MAIN) cleaned parameters for next round', 'NFO');
 	else
 		Simulation.Logger.log('(MAIN) simulation completed', 'NFO');
+        Simulation.exportToMAT(Simulation);
 	end
 end
 

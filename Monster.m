@@ -232,8 +232,20 @@ classdef Monster < matlab.mixin.Copyable
 
 			obj.Logger.log('(MONSTER - clean) eNodeB end of round cleaning', 'DBG');
 			arrayfun(@(x)x.reset(), obj.Users);		
-		end
-			
+        end
+		
+        function obj = exportToMAT(obj, Simulation)
+           	% Last Round Export Simulation Variable to MAT and store it in
+           	% Logs/
+			%
+			% :obj: Monster instance
+			%
+            if obj.Config.Logs.SimToMat
+                obj.Logger.log('Saving Data To MAT', 'NFO');
+                MATFile = strcat(obj.Config.Logs.logPath, obj.Config.Scenario, datestr(datetime, obj.Config.Logs.dateFormat), '.mat');
+                save(MATFile,'Simulation');
+            end
+        end
 
 	end	
 

@@ -3,6 +3,7 @@ classdef MetricRecorder < matlab.mixin.Copyable
 	properties
 		infoUtilLo;
 		infoUtilHi;
+        ASMmaxSleep;
 		util;
 		powerConsumed;
 		schedule;
@@ -46,7 +47,8 @@ classdef MetricRecorder < matlab.mixin.Copyable
 			end
 			obj.powerState = zeros(Config.Runtime.simulationRounds, numEnodeBs);
             obj.ASMState = zeros(Config.Runtime.simulationRounds, numEnodeBs);
-			
+			obj.ASMmaxSleep = max(Config.ASM.NumSM(cumsum(2*Config.ASM.tSM)<Config.ASM.Periodicity));
+            
 			% Initialise for UE
 			obj.ber = zeros(Config.Runtime.simulationRounds, Config.Ue.number);
 			obj.snrdB = zeros(Config.Runtime.simulationRounds, Config.Ue.number);

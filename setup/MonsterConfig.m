@@ -3,6 +3,7 @@ classdef MonsterConfig < matlab.mixin.Copyable
 	% During simulation runtime, the modules access the sim config via an object of this class
 	% An instance of the class MonsterConfig has the following properties:
 	% 
+    % :Scenario: Simulation Title
 	% :Runtime: (struct) configuration for the simulation runtime
 	% :Logs: (struct)
 	% :SimulationPlot: (struct) configuration for plotting
@@ -20,8 +21,10 @@ classdef MonsterConfig < matlab.mixin.Copyable
 	% :Harq: (struct) configuration for the HARQ protocol (e.g. activation, etc.)
 	% :Arq: (struct) configuration for the ARQ protocol (e.g activation, etc.)
 	% :Mimo: (struct) configuration for the global transmission mode for the simulation
+    % :ASM: (struct) configuration for Advanced Sleep Mode algorithm
 
 	properties 
+		Scenario = 'unnamed';
 		Runtime = struct();
 		Logs = struct();
 		SimulationPlot = struct();
@@ -38,7 +41,6 @@ classdef MonsterConfig < matlab.mixin.Copyable
 		Son = struct();
 		Harq = struct();
 		Arq = struct();
-		Scenario = struct();
 		Backhaul = struct();
 		SRS = struct();
 		Mimo = struct();
@@ -57,10 +59,9 @@ classdef MonsterConfig < matlab.mixin.Copyable
             ASM = struct();
             ASM.Enabled = true; %Turn ASM on or off
             %time duration (millisecs) of Sleep modes
-            ASM.tSM1 = 71e-3;
-            ASM.tSM2 = 1;
-            ASM.tSM3 = 10;
-            ASM.tSM4 = 1000;
+            ASM.tSM = [71e-3 1 10 1000];
+            ASM.NumSM = [1:length(ASM.tSM)];
+            ASM.Periodicity = 5; %in millisec usually 5, 10, 20, 40, 80, 100
             ASM.Buffering = false; % Activate or deactivate buffering during sleeping
             obj.ASM = ASM;
 
@@ -73,6 +74,7 @@ classdef MonsterConfig < matlab.mixin.Copyable
 
 			% Logs configuration
 			Logs = struct();
+            Logs.SimToMat = true; % 1 Save data as MAT | 0 Don't save data as MAT
 			Logs.logToFile = 0; % 0 only console | 1 only file | 2 both 
 			Logs.logInBlack = 0;
 			Logs.dateFormat = 'yyyy-mm-dd_HH.MM.SS';

@@ -34,6 +34,7 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
         Pidle;
         Psm;
         ASMCount;
+        ASMmaxSleep;
         %END
 		Tx;
 		Rx;
@@ -93,6 +94,7 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 			obj.PowerState = 1;
             obj.ASMState = 0; %0 for normal, from 1 to 4 for SM#
             obj.ASMCount = 0; % counts idle time in ms
+            obj.ASMmaxSleep = max(Config.ASM.NumSM(cumsum(2*Config.ASM.tSM)<Config.ASM.Periodicity));
 			obj.HystCount = 0;
 			obj.SwitchCount = 0;
 			obj.DlFreq = Config.Phy.downlinkFrequency;
@@ -404,26 +406,30 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
                if obj.ASMCount == 0
                    obj.ASMState = 1;
                end
-               if obj.ASMCount == Config.ASM.tSM2 %sm2
+               if obj.ASMCount == Config.ASM.tSM(2) %sm2
                    obj.ASMState = obj.ASMState +1;
                end
-               if obj.ASMCount == Config.ASM.tSM3 %sm3
+               if obj.ASMCount == Config.ASM.tSM(3) %sm3
                    obj.ASMState = obj.ASMState +1;
                end
-               if obj.ASMCount == Config.ASM.tSM4 %sm4
+               if obj.ASMCount == Config.ASM.tSM(4) %sm4
                    obj.ASMState = obj.ASMState +1;
                end
                obj.ASMCount = obj.ASMCount +1;
             elseif obj.Utilisation == 100
                     obj.ASMState = 100;
             else
-               obj.ASMCount = 0;
-               obj.ASMState = 0;
-               %Check the buffer queue
-            end
-            % if buffering is enabled
-            if Config.ASM.Buffering
+                obj.ASMCount = 0;
+                obj.ASMState = 0;
+                %Check the buffer queue
+                % if buffering is enabled
+                if Config.ASM.Buffering
 
+                end
+            end
+            
+            if (obj.ASMState > obj.ASMmaxSleep && obj.ASMState ~=100)
+               obj.ASMState = obj.ASMmaxSleep;
             end
 
         end
