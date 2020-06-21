@@ -33,8 +33,14 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
         Pactive;
         Pidle;
         Psm;
+        ASMtransition;
+        ASMprevRequest;
+        ASMroundCount;
+        ASMCountdown;
         ASMCount;
         ASMmaxSleep;
+        ASMBuffer;
+        ASMutil;
         %END
 		Tx;
 		Rx;
@@ -58,7 +64,7 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 			obj.Position = CellConfig.position;
 			obj.NCellID = cellId;
 			obj.Seed = cellId*Config.Runtime.seed;
-			
+            
 			switch obj.BsClass
 				case 'macro'
 					obj.NDLRB = Config.MacroEnb.numPRBs;
@@ -79,7 +85,14 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 					obj.DeltaP = 2.6;
 					obj.Psleep = 39.0; % W
 					obj.Mimo = generateMimoConfig(Config, 'micro');
-			end
+            end
+
+            if Config.ASM.Buffering
+                obj.ASMBuffer = struct(...
+                    'maxSize', Config.ASM.BufferCapacity,...
+                    'requests', zeros(1, Config.ASM.BufferCapacity));
+            end
+            
 			obj.NULRB = Config.Ue.numPRBs;
 			obj.CellRefP = obj.Mimo.numAntennas;
 			obj.CyclicPrefix = 'Normal';
@@ -94,7 +107,12 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 			obj.PowerState = 1;
             obj.ASMState = 0; %0 for normal, from 1 to 4 for SM#
             obj.ASMCount = 0; % counts idle time in ms
+            obj.ASMCountdown = 0; % counts activation time in ms
+            obj.ASMroundCount = 0; % counts simulation rounds in ms
             obj.ASMmaxSleep = max(Config.ASM.NumSM(cumsum(2*Config.ASM.tSM)<Config.ASM.Periodicity));
+            obj.ASMtransition = 0; %0 deactivating and sleeping | 1 activating
+            obj.ASMprevRequest = 0; %Stores the activation previous request
+            obj.ASMutil = 0; %Utilization after sleep effect
 			obj.HystCount = 0;
 			obj.SwitchCount = 0;
 			obj.DlFreq = Config.Phy.downlinkFrequency;
@@ -398,51 +416,95 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 			end
         end
         
+        
+        % Activate eNB for signalling or user request
+        function obj = ASMhandleBufferedRequests(obj)
+            obj.ASMBuffer.requests = [sum(obj.ASMBuffer.requests), zeros(1,length(obj.ASMBuffer.requests)-1)];
+            if obj.ASMBuffer.requests(1) >= 100
+                obj.ASMBuffer.requests(1) = obj.ASMBuffer.requests(1) -100;
+                obj.ASMutil = 100;
+            else
+                obj.ASMutil = obj.ASMBuffer.requests(1);
+                obj.ASMBuffer.requests(1) = 0;
+            end
+        end
+        
+        % Activate eNB for signalling or user request
+        function obj = ASMactivateEnb(obj, request, Config)            
+           if obj.ASMtransition == 0 || strcmp(request,obj.ASMprevRequest) %first time or the same request
+               obj.ASMtransition = 1;
+               obj.ASMprevRequest = request;
+               obj.ASMState = -1*abs(obj.ASMState);
+               if obj.ASMCountdown == 0 %eNB wakes up
+                   obj.ASMCountdown = 1;
+                   obj.ASMCount = 0; 
+                   if strcmp(request,'Signalling') && mod(obj.ASMroundCount,Config.ASM.Periodicity) == 0 % already awake for signaling do nothing
+                       obj.ASMtransition = 0;
+                       obj.ASMState = -99; %awake only for signalling
+                   elseif strcmp(request,'userRequest')
+                       obj.ASMtransition = 0;
+                       obj.ASMState = 0;
+                       ASMhandleBufferedRequests(obj);
+                   end
+               end
+               obj.ASMCountdown = obj.ASMCountdown - 1;
+           end
+        end
+        
         % ASM Evaluate Advanced Sleeping State
         function obj = evaluateSleepState(obj, Config)
-            %obj.ASMState = 1; %sm1 is already included in avg DTX
-            %DTX reduction in average power
-            if obj.Utilisation == 0
-               if obj.ASMCount == 0
-                   obj.ASMState = 1;
-               end
-               if obj.ASMCount == Config.ASM.tSM(2) %sm2
-                   obj.ASMState = obj.ASMState +1;
-               end
-               if obj.ASMCount == Config.ASM.tSM(3) %sm3
-                   obj.ASMState = obj.ASMState +1;
-               end
-               if obj.ASMCount == Config.ASM.tSM(4) %sm4
-                   obj.ASMState = obj.ASMState +1;
-               end
-               obj.ASMCount = obj.ASMCount +1;
-            elseif obj.Utilisation == 100
-                    obj.ASMState = 100;
-            else
-                obj.ASMCount = 0;
-                obj.ASMState = 0;
-                %Check the buffer queue
-                % if buffering is enabled
-                if Config.ASM.Buffering
+            obj.ASMroundCount = obj.ASMroundCount + 1;
 
-                end
+            %request for Wake up for signalling before signal time -
+            %activation time until the signal time
+            if mod(obj.ASMroundCount,Config.ASM.Periodicity) - ...
+                    (Config.ASM.Periodicity - ceil(0.5*Config.ASM.tSM(obj.ASMmaxSleep))) >= 0 ||...
+                    mod(obj.ASMroundCount,Config.ASM.Periodicity) == 0
+                obj = ASMactivateEnb(obj,'Signalling', Config);
             end
             
-            if (obj.ASMState > obj.ASMmaxSleep && obj.ASMState ~=100)
-               obj.ASMState = obj.ASMmaxSleep;
+            %obj.ASMState = 1; %sm1 is already included in avg DTX
+            %DTX reduction in average power -linear model-
+            if obj.Utilisation == 0  && ~obj.ASMtransition
+               if obj.ASMState == -99
+                   obj.ASMState = -1;
+                   obj.ASMCountdown = 0;
+               elseif obj.ASMCount == 0
+                   obj.ASMState = 1;
+                   obj.ASMCountdown = 0;
+               elseif obj.ASMCount == Config.ASM.tSM(2) && obj.ASMmaxSleep >= 2 %sm2
+                   obj.ASMState = 2; %Goes to next sleep mode
+                   obj.ASMCountdown = ceil(0.5*Config.ASM.tSM(2));
+               elseif obj.ASMCount == ceil(0.5*Config.ASM.tSM(3)) + ceil(sum(Config.ASM.tSM(1:2))) && obj.ASMmaxSleep >= 3 %sm3
+                   obj.ASMState = 3;
+                   obj.ASMCountdown = ceil(0.5*Config.ASM.tSM(3));
+               elseif obj.ASMCount == ceil(0.5*Config.ASM.tSM(4)) + ceil(sum(Config.ASM.tSM(1:3))) && obj.ASMmaxSleep >= 4 %sm4
+                   obj.ASMState = 4;
+                   obj.ASMCountdown = ceil(0.5*Config.ASM.tSM(4));
+               end
+               obj.ASMCount = obj.ASMCount +1;
+            else
+                %Check the buffer queue
+                % if buffering is enabled
+                if Config.ASM.Buffering %FIFO buffer concept
+                    obj.ASMBuffer.requests = [obj.Utilisation obj.ASMBuffer.requests(1:end-1)];
+                    obj.ASMutil = 0;
+                end
             end
-
+            % Check User requests in the buffer
+            if sum(obj.ASMBuffer.requests) ~= 0
+                obj = ASMactivateEnb(obj,'userRequest', Config);
+            end
         end
 
 		function obj = uplinkSchedule(obj, Users)
 			if obj.Mac.ShouldSchedule
 				obj.Mac.Schedulers.uplink.scheduleUsers(Users);
 			elseif ~isempty(obj.AssociatedUsers)
-				obj.Logger.log('Could not schedule in uplinkSchedule: no data in associated users queues or cell sleeping','WRN');
+				%obj.Logger.log('Could not schedule in uplinkSchedule: no data in associated users queues or cell sleeping','WRN');
 			end
 		end
 	
-		
 		% used to calculate the power in based on the BS class
 		function obj = calculatePowerIn(obj, enbCurrentUtil, otaPowerScale, utilLoThr)
 			% The output power over the air depends on the utilisation, if energy saving is enabled
@@ -461,8 +523,6 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
                 if obj.PowerState == 1
                     % ASM if active override power with Psm
                     obj = calculatePowerEnB(obj);
-                else
-                    obj.PowerIn = obj.Pidle;
                 end
 			else
 				% shutodwn, inactive and boot
@@ -472,12 +532,12 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
         
         function obj = calculatePowerEnB(obj)
             % ASM if active override power with Psm
-            if obj.ASMState == 100
-                obj.PowerIn = obj.Pactive;
+            if obj.ASMState == -1
+                obj.PowerIn = obj.Pidle;
             elseif obj.ASMState > 0
-                obj.PowerIn = obj.Psm(obj.ASMState);
+                obj.PowerIn = obj.Psm(abs(obj.ASMState));
             else
-                obj.PowerIn = obj.Pactive*obj.Utilisation/100 + obj.Psm(obj.ASMState+1)*(100-obj.Utilisation)/100;
+                obj.PowerIn = obj.Pactive*obj.Utilisation/100 + obj.Psm(abs(obj.ASMState)+1)*(100-obj.Utilisation)/100;
             end
         end
         
@@ -542,14 +602,15 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
 				% Check utilisation
 				sch = find([obj.Mac.Schedulers.downlink.PRBsActive.UeId] ~= -1);
 				obj.Utilisation = 100*find(sch, 1, 'last' )/length([obj.Mac.Schedulers.downlink.PRBsActive]);
-				
+                
 				if isempty(obj.Utilisation)
 					obj.Utilisation = 0;
 				end
 			elseif ~isempty(obj.AssociatedUsers)
-				obj.Logger.log('Could not schedule in downlinkSchedule: no data in associated users queues or cell sleeping','WRN');
+				%obj.Logger.log('Could not schedule in downlinkSchedule: no data in associated users queues or cell sleeping','WRN');
 				obj.Utilisation = 0;
-			end
+            end
+            obj.ASMutil = obj.Utilisation;
 		end
 		
 		function obj = uplinkReception(obj, Users, timeNow, ChannelEstimator)

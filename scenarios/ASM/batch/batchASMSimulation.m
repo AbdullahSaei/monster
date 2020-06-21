@@ -1,6 +1,10 @@
-close all
-clc
-
+function batchASMSimulation(numUsers, periodicity, SimID)
+	% Single instance of simulation for the ASM batch scenario
+	%
+	% :param numUsers: integer that sets number of UEs for the simulation
+	% :param periodicity: integer that sets the signalling periodicity of eNBs
+	% 
+    
 % Disable cast to struct warnings
 w = warning ('off','all');
 
@@ -8,13 +12,13 @@ w = warning ('off','all');
 Config = MonsterConfig(); % Get template config parameters
 
 Config.Logs.logToFile = 1; % 0 only console | 1 only file | 2 both
-Config.Logs.SimToMat = 0; % 1 Save data as MAT | 0 Don't save data as MAT
+Config.Logs.SimToMat = 1; % 1 Save data as MAT | 0 Don't save data as MAT
 Config.SimulationPlot.runtimePlot = 0; 
-Config.Runtime.simulationRounds = 40; % each round TTI (subframe 1 ms)
+Config.Runtime.simulationRounds = 100; % each round TTI (subframe 1 ms)
 
 %ASM parameters:
-Config.ASM.Periodicity = 30; %in msecs
-Config.Ue.number = 30;
+Config.ASM.Periodicity = periodicity; %in msecs
+Config.Ue.number = numUsers;
 Config.Scenario = strcat('ASM_p',num2str(Config.ASM.Periodicity),'u',num2str(Config.Ue.number),'_');
 
 
@@ -51,22 +55,18 @@ Config.Mobility.Velocity = 0.001;
 Config.Traffic.primary = 'videoStreaming';
 Config.Traffic.mix = 0; %0-> no mix, only primary
 Config.Traffic.arrivalDistribution = 'Poisson'; % Static | Uniform | Poisson
-Config.Traffic.poissonLambda = 9;
+Config.Traffic.poissonLambda = 6;
 %Simulation bandwidth: 20 MHz for TDD, 10 MHz+10 MHz for FDD
 
 Logger = MonsterLog(Config);
     
 % Setup objects
 Simulation = Monster(Config, Logger);
-Logger.log('(ASMsimulation) Running Simulation', 'NFO');
+Logger.log(sprintf('(ASMsimulation) Running Simulation ID %d', SimID), 'NFO');
 clear textprogressbar
-textprogressbar(sprintf('Progress of %d Simulations: ',Config.Runtime.simulationRounds));
-
-%Scale rounds Progress bar to 100%
-val = rescale(0:(Simulation.Runtime.totalRounds - 1),1,100);
+textprogressbar(sprintf('Progress of %d Simulation: ',SimID));
 
 for iRound = 0:(Simulation.Runtime.totalRounds - 1)
-    textprogressbar(val(iRound+1));
     Simulation.setupRound(iRound);
 
 	Simulation.Logger.log(sprintf('(ASMsimulation) simulation round %i, time elapsed %f s, time left %f s',...
@@ -88,8 +88,10 @@ for iRound = 0:(Simulation.Runtime.totalRounds - 1)
 		Simulation.Logger.log('(ASMsimulation) cleaned parameters for next round', 'NFO');
 	else
 		Simulation.Logger.log('(ASMsimulation) simulation completed', 'NFO');
+        textprogressbar(iRound+1);
         Simulation.exportToMAT(Simulation);
-        clearvars -except Simulation
         textprogressbar(' Completed');
 	end
+end
+
 end

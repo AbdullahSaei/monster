@@ -5,6 +5,7 @@ classdef MetricRecorder < matlab.mixin.Copyable
 		infoUtilHi;
         ASMmaxSleep;
 		util;
+        ASMUtilisation;
 		powerConsumed;
 		schedule;
 		harqRtx;
@@ -46,6 +47,8 @@ classdef MetricRecorder < matlab.mixin.Copyable
 				obj.arqRtx = zeros(Config.Runtime.simulationRounds, numEnodeBs);
 			end
 			obj.powerState = zeros(Config.Runtime.simulationRounds, numEnodeBs);
+            %ASM Param
+            obj.ASMUtilisation = zeros(Config.Runtime.simulationRounds, numEnodeBs);
             obj.ASMState = zeros(Config.Runtime.simulationRounds, numEnodeBs);
 			obj.ASMmaxSleep = max(Config.ASM.NumSM(cumsum(2*Config.ASM.tSM)<Config.ASM.Periodicity));
             
@@ -88,13 +91,16 @@ classdef MetricRecorder < matlab.mixin.Copyable
 				end
 				
 				obj.util(schRound, iCell) = utilPercent;
+                obj.ASMUtilisation(schRound, iCell) = Cells(iCell).ASMutil;
 			end
 		end
 		
 		function obj = recordPower(obj, Cells, schRound, otaPowerScale, utilLo, Logger)
 			for iCell = 1:length(Cells)
 				if ~isempty(obj.util(schRound, iCell))
-                    Cells(iCell).evaluatePowerState(obj.Config, Cells);
+                    % already called in Monster.m->run
+                    % was disabled for TODO revision
+                    % Cells(iCell).evaluatePowerState(obj.Config, Cells);
 					Cells(iCell) = Cells(iCell).calculatePowerIn(obj.util(schRound, iCell)/100, otaPowerScale, utilLo);
 					obj.powerConsumed(schRound, iCell) = Cells(iCell).PowerIn;
 				else

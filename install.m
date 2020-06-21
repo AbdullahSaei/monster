@@ -44,6 +44,8 @@ if verLessThan('matlab', '8.5.0')
 	addpath(genpath(fullfile(root, 'compatibility', '8.5')));
 end
 
+%Clean workspace
+clearvars
 
 % Disable warnings
 warning('off','catstruct:DuplicatesFound');

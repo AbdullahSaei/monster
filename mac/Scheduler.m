@@ -103,7 +103,7 @@ classdef Scheduler < matlab.mixin.Copyable
 							
 					end
 				otherwise
-					obj.Logger.log('Unknown scheduler pype','ERR','MonsterScheduler:UnknownSchedulerType');
+					obj.Logger.log('Unknown scheduler type','ERR','MonsterScheduler:UnknownSchedulerType');
 			end
 			
 			obj.setUserParam(Users);

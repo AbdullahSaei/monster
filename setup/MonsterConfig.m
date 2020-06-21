@@ -62,7 +62,8 @@ classdef MonsterConfig < matlab.mixin.Copyable
             ASM.tSM = [71e-3 1 10 1000];
             ASM.NumSM = [1:length(ASM.tSM)];
             ASM.Periodicity = 5; %in millisec usually 5, 10, 20, 40, 80, 100
-            ASM.Buffering = false; % Activate or deactivate buffering during sleeping
+            ASM.Buffering = true; % Activate or deactivate buffering during sleeping
+            ASM.BufferCapacity = 10;
             obj.ASM = ASM;
 
 			% Parameters related to simulation run time

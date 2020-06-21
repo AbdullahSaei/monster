@@ -1,6 +1,8 @@
-per = 40;
+per = 10;
+min = 2;
 
-tSM = [0.071 1 10 1000];
-SM = [1 2 3 4];
-
-maxSleep = max(SM(cumsum(2*tSM)<per))
+for count = 1:50
+    if mod(count,per)-(per-min) >= 0 || mod(count,per) == 0
+       fprintf('%d\n',count); 
+    end
+end

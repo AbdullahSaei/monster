@@ -1,11 +1,11 @@
 %% APIs
 close all
+clearvars 
 clc 
 
 resultsPath = './';
-expName = 'ASM';
-simulationRounds = 14;
-numberUsers = 9;
+expName = 'ASM_';
+simulationRounds = 100;
 
 %% Opening files
 %**Validating the inputs**********************%
@@ -24,21 +24,23 @@ fprintf('Number of Experiments found with name %s = %d :- \n',expName,length(lis
 
 
 %% Extracting Data
+clearvars -except listing simulationRounds
+
 EnbSectors = 3;
 combinedResults = struct(...
-    'power', zeros(length(listing), simulationRounds, EnbSectors), ...
-    'sinr', zeros(length(listing), simulationRounds, numberUsers), ...
-    'meanSinr', zeros(length(listing), numberUsers),...
-    'rxPower', zeros(length(listing), simulationRounds, numberUsers), ...
-    'meanRxPower', zeros(length(listing), numberUsers));
+    'periodicity', 0, ...
+    'numUsers', 0, ...
+    'power', 0, ...
+    'throughput', zeros(length(listing), simulationRounds, EnbSectors), ...
+    'harqRtx', zeros(length(listing), simulationRounds, EnbSectors));
 
 for iFile = 1:length(listing)
     load(listing(iFile).name);
-    combinedResults.power(iFile, :,:) = Simulation.Results.powerConsumed;
-    combinedResults.sinr(iFile, :, :) = Simulation.Results.wideBandSinrdB;
-    combinedResults.meanSinr(iFile, :) = mean(Simulation.Results.wideBandSinrdB, 1);
-    combinedResults.rxPower(iFile, :, :) = Simulation.Results.receivedPowerdBm;
-    combinedResults.meanRxPower(iFile, :) = mean(Simulation.Results.receivedPowerdBm, 1);
+    combinedResults.periodicity(iFile) = Simulation.Config.ASM.Periodicity;
+    combinedResults.numUsers(iFile) = length(Simulation.Users);
+    combinedResults.power(iFile) = sum(mean(Simulation.Results.powerConsumed));
+    combinedResults.harqRtx(iFile, :, :) = Simulation.Results.harqRtx;
+    %combinedResults.throughput(iFile, :, :) = Simulation.Results.throughput;
     if iFile == length(listing)
         % In the last iteration, save also the users and the eNodeB
         users = Simulation.Users;
@@ -46,7 +48,8 @@ for iFile = 1:length(listing)
     end
     clear Simulation;
 end
-
+clearvars -except combinedResults
+%{
 %% Plotting
 seriesColoursHex = {'#C1232B', '#27727B', '#FCCE10'};
 seriesColoursRgb = [0.7569 0.1373 0.1686; 0.1529 0.4471 0.4824; 0.9882 0.8078 0.0627];
@@ -61,3 +64,4 @@ drawnow
 xlabel('eNodeB max TX power [W]')
 ylabel('Average network power consumed [W]')
 title('Network power consumption')
+%}
