@@ -19,7 +19,7 @@ Config.Runtime.simulationRounds = 100; % each round TTI (subframe 1 ms)
 %ASM parameters:
 Config.ASM.Periodicity = periodicity; %in msecs
 Config.Ue.number = numUsers;
-Config.Scenario = strcat('ASM_p',num2str(Config.ASM.Periodicity),'u',num2str(Config.Ue.number),'_');
+Config.Scenario = strcat('fullBuff_p',num2str(Config.ASM.Periodicity),'u',num2str(Config.Ue.number),'_');
 
 
 %ASM paper duplication
@@ -52,10 +52,10 @@ Config.Mobility.scenario = 'pedestrian';
 Config.Mobility.Velocity = 0.001;
 
 % Traffic types: fullBuffer | videoStreaming | webBrowsing 
-Config.Traffic.primary = 'videoStreaming';
+Config.Traffic.primary = 'fullBuffer';
 Config.Traffic.mix = 0; %0-> no mix, only primary
 Config.Traffic.arrivalDistribution = 'Poisson'; % Static | Uniform | Poisson
-Config.Traffic.poissonLambda = 6;
+Config.Traffic.poissonLambda = 9;
 %Simulation bandwidth: 20 MHz for TDD, 10 MHz+10 MHz for FDD
 
 Logger = MonsterLog(Config);

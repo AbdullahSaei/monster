@@ -417,7 +417,7 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
         end
         
         
-        % Activate eNB for signalling or user request
+        % Process user requests in the buffer
         function obj = ASMhandleBufferedRequests(obj)
             obj.ASMBuffer.requests = [sum(obj.ASMBuffer.requests), zeros(1,length(obj.ASMBuffer.requests)-1)];
             if obj.ASMBuffer.requests(1) >= 100
@@ -534,7 +534,7 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
             % ASM if active override power with Psm
             if obj.ASMState == -1
                 obj.PowerIn = obj.Pidle;
-            elseif obj.ASMState > 0
+            elseif abs(obj.ASMState) > 0
                 obj.PowerIn = obj.Psm(abs(obj.ASMState));
             else
                 obj.PowerIn = obj.Pactive*obj.Utilisation/100 + obj.Psm(abs(obj.ASMState)+1)*(100-obj.Utilisation)/100;

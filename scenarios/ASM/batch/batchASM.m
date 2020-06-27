@@ -3,17 +3,20 @@
 % Main batch manager to parallelise the execution of the various instances
 %
 
-numUE = [9 19 29 39];
-periods = [10 20 40 80];
+numUE = [1 11 21];
+periods = [5 10 20 40 80 160];
+if isempty(gcp('nocreate'))
+    cluster = parcluster;
+    parpool(cluster);
+end
 
-parfor UEs = 1:length(numUE)
+parfor UE = 1:length(numUE)
     for pers = 1:length(periods)
-        try
-            batchASMSimulation(numUE(UEs), periods(pers), pers);
-            %batchSimulation(batchSeeds(iSeed), toggleSweep, folderPath);
-        catch ME
-            fprintf('(BATCH MAIN) Error in batch for simulation index %i\n', iSeed);
-            ME
-        end
+            try
+                batchASMSimulation(numUE(UE), periods(pers), pers);
+            catch ME
+                fprintf('(BATCH MAIN) Error in batch for simulation index %i\n', pers);
+                ME
+            end
     end
 end
