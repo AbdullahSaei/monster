@@ -82,7 +82,7 @@ for iFile = 1:length(res)
     %res(iFile).calcPower = calculatePowerEnB(res(iFile).UserRequests,...
     %    'No', 250, 109, [1 1 1 1 1]);
     %res(iFile).delay = calculateDelay(res(iFile).UserRequests, res(iFile).asmUtil);
-    %[res(iFile).delay, res(iFile).service] = calculateDelay(res(iFile).UserRequests, res(iFile).asmUtil);
+    [res(iFile).delay, res(iFile).service] = calculateDelay(res(iFile).UserRequests, res(iFile).asmUtil);
     %if length(find(res(iFile).UserRequests))-length(find(res(iFile).service)) ~=0
     %    fprintf('in %d there is %d and %d then %d \n',iFile,length(find(res(iFile).UserRequests)),...
     %        length(find(res(iFile).delay)),(length(find(res(iFile).UserRequests))-length(find(res(iFile).delay))));
@@ -92,9 +92,9 @@ for iFile = 1:length(res)
     %    Simulation.Cells(1, 1).Pidle, Simulation.Cells(1, 1).Psm);
     
     
-    res(iFile).power = calculatePowerEnB(res(iFile).UserRequests,...
-        res(iFile).asmStates, Simulation.Cells(1, 1).Pactive,...
-        Simulation.Cells(1, 1).Pidle, Simulation.Cells(1, 1).Psm);
+    %res(iFile).power = calculatePowerEnB(res(iFile).UserRequests,...
+    %    res(iFile).asmStates, Simulation.Cells(1, 1).Pactive,...
+    %    Simulation.Cells(1, 1).Pidle, Simulation.Cells(1, 1).Psm);
 
 end
 else
@@ -102,7 +102,7 @@ else
 end
 %% Plotting
 close all
-fprintf('Summary of %s:\n',expName);
+%fprintf('Summary of %s:\n',expName);
 clearvars -except res
 
 periods = unique([res.periodicity],'stable');
@@ -185,18 +185,16 @@ sgtitle('Buffering Effect on Power Consumption');
 %% Functions
 
 function [delay, service]= calculateDelay(req, serve)
-   service = req - serve;
+   service = serve;
    delay = zeros(size(service));
-   for i = 1:numel(service)
-       if service(i) > 0
-          temp = service(i);
-          for j = i:numel(service(i:end))             
-             if  temp + service(j) <=0
+   for i = 1:numel(req)
+       if req(i) > 0
+          for j = i:numel(serve(i:end))             
+             if  req(i) - serve(j) <=0
+                 serve(j) = serve(j) - req(i);
                  break;
              else
-                 if service(j) < 0
-                    temp = temp + service(j);
-                 end
+                 req(i) = req(i) - serve(j);
                  delay(i) = delay(i) + 1; 
              end
           end
@@ -204,7 +202,12 @@ function [delay, service]= calculateDelay(req, serve)
    end
    delay(delay == 0) = [];
    req(req==0) = [];
-   delay = [delay zeros(1,(length(req)-length(delay)))];
+   if sum(sum(req)) == sum(sum(service))
+       delay = [delay zeros(1,(length(req)-length(delay)))];
+   else %buffer needs to flush
+      stillinBuff = nnz(req)-length(delay);
+      delay = [zeros(1,stillinBuff) delay(1)*ones(1,length(delay))];
+   end
    delay = mean(delay);
 end
 
