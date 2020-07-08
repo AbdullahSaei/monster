@@ -448,6 +448,13 @@ classdef EvolvedNodeB < matlab.mixin.Copyable
                    end
                end
                obj.ASMCountdown = obj.ASMCountdown - 1;
+           else
+              if obj.ASMCountdown == 0 %eNB already awake up
+                   if strcmp(request,'userRequest')
+                       obj.ASMState = 0;
+                       ASMhandleBufferedRequests(obj);
+                   end
+              end
            end
         end
         

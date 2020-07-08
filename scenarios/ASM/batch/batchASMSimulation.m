@@ -1,4 +1,4 @@
-function batchASMSimulation(numUsers, periodicity, SimID)
+function batchASMSimulation(numUsers, periodicity, seed)
 	% Single instance of simulation for the ASM batch scenario
 	%
 	% :param numUsers: integer that sets number of UEs for the simulation
@@ -19,7 +19,8 @@ Config.Runtime.simulationRounds = 100; % each round TTI (subframe 1 ms)
 %ASM parameters:
 Config.ASM.Periodicity = periodicity; %in msecs
 Config.Ue.number = numUsers;
-Config.Scenario = strcat('fullBuff_p',num2str(Config.ASM.Periodicity),'u',num2str(Config.Ue.number),'_');
+Config.Runtime.seed = seed;
+Config.Scenario = strcat('Seed_',num2str(Config.Runtime.seed) , '_p',num2str(Config.ASM.Periodicity),'u',num2str(Config.Ue.number),'_');
 
 
 %ASM paper duplication
@@ -62,11 +63,13 @@ Logger = MonsterLog(Config);
     
 % Setup objects
 Simulation = Monster(Config, Logger);
-Logger.log(sprintf('(ASMsimulation) Running Simulation ID %d', SimID), 'NFO');
 clear textprogressbar
-textprogressbar(sprintf('Progress of %d Simulation: ',SimID));
+textprogressbar(sprintf('Seed %d UE %d Per %d = ', seed, numUsers, periodicity));
+%Scale rounds Progress bar to 100%
+val = rescale(0:(Simulation.Runtime.totalRounds - 1),1,100);
 
 for iRound = 0:(Simulation.Runtime.totalRounds - 1)
+    textprogressbar(val(iRound+1));
     Simulation.setupRound(iRound);
 
 	Simulation.Logger.log(sprintf('(ASMsimulation) simulation round %i, time elapsed %f s, time left %f s',...
@@ -88,7 +91,6 @@ for iRound = 0:(Simulation.Runtime.totalRounds - 1)
 		Simulation.Logger.log('(ASMsimulation) cleaned parameters for next round', 'NFO');
 	else
 		Simulation.Logger.log('(ASMsimulation) simulation completed', 'NFO');
-        textprogressbar(iRound+1);
         Simulation.exportToMAT(Simulation);
         textprogressbar(' Completed');
 	end

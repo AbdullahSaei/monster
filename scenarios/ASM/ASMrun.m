@@ -13,9 +13,9 @@ Config.SimulationPlot.runtimePlot = 0;
 Config.Runtime.simulationRounds = 40; % each round TTI (subframe 1 ms)
 
 %ASM parameters:
-Config.ASM.Periodicity = 80; %in msecs
+Config.ASM.Periodicity = 5; %in msecs
 Config.Ue.number = 1;
-Config.Scenario = strcat('Static_p',num2str(Config.ASM.Periodicity),'u',num2str(Config.Ue.number),'_');
+Config.Scenario = strcat('test_',num2str(Config.ASM.Periodicity),'u',num2str(Config.Ue.number),'_');
 
 
 %ASM paper duplication
@@ -48,9 +48,9 @@ Config.Mobility.scenario = 'pedestrian';
 Config.Mobility.Velocity = 0.001;
 
 % Traffic types: fullBuffer | videoStreaming | webBrowsing 
-Config.Traffic.primary = 'videoStreaming';
+Config.Traffic.primary = 'fullBuffer';
 Config.Traffic.mix = 0; %0-> no mix, only primary
-Config.Traffic.arrivalDistribution = 'Static'; % Static | Uniform | Poisson
+Config.Traffic.arrivalDistribution = 'Poisson'; % Static | Uniform | Poisson
 Config.Traffic.poissonLambda = 9;
 %Simulation bandwidth: 20 MHz for TDD, 10 MHz+10 MHz for FDD
 
