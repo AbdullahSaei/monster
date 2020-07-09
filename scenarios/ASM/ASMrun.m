@@ -9,12 +9,12 @@ Config = MonsterConfig(); % Get template config parameters
 
 Config.Logs.logToFile = 1; % 0 only console | 1 only file | 2 both
 Config.Logs.SimToMat = 0; % 1 Save data as MAT | 0 Don't save data as MAT
-Config.SimulationPlot.runtimePlot = 0; 
+Config.SimulationPlot.runtimePlot = 1; 
 Config.Runtime.simulationRounds = 40; % each round TTI (subframe 1 ms)
 
 %ASM parameters:
 Config.ASM.Periodicity = 5; %in msecs
-Config.Ue.number = 1;
+Config.Ue.number = 11;
 Config.Scenario = strcat('test_',num2str(Config.ASM.Periodicity),'u',num2str(Config.Ue.number),'_');
 
 
